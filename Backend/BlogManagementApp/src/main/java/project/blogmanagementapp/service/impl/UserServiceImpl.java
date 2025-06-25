@@ -8,6 +8,7 @@ import project.blogmanagementapp.repository.UserRepository;
 import project.blogmanagementapp.service.UserService;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -28,5 +29,10 @@ public class UserServiceImpl implements UserService {
 
     public User findByUsername(String username) {
         return userRepository.findByUsername(username).orElseThrow() ;
+    }
+
+    @Override
+    public Optional<User> getUserById(Long id) {
+        return userRepository.findById(id);
     }
 }
