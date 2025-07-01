@@ -1,9 +1,9 @@
 package project.blogmanagementapp.controller;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import project.blogmanagementapp.dto.PostDto;
 import project.blogmanagementapp.entity.Post;
 import project.blogmanagementapp.service.PostService;
 
@@ -17,16 +17,11 @@ public class PostController {
     private PostService postService;
 
     @PostMapping
-    public ResponseEntity<String> createPost(@RequestParam String title,
-                                           @RequestParam String content,
-                                           @RequestParam Long userId,
-                                           @RequestParam Long categoryId
-                                           ) {
+    public ResponseEntity<String> createPost(@RequestBody PostDto postDto) {
         try {
-            Post post = postService.createPost(title,content,userId,categoryId);
-            return ResponseEntity.ok("Post careted with ID: " + post.getId());
-        }
-        catch (IllegalStateException e) {
+            Post post = postService.createPost(postDto.getTitle(), postDto.getContent(), postDto.getUserId(), postDto.getCategoryId());
+            return ResponseEntity.ok("Post created with ID: " + post.getId());
+        } catch (IllegalStateException e) {
             return ResponseEntity.status(400).body(e.getMessage());
         }
     }
@@ -45,12 +40,9 @@ public class PostController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updatePost(@PathVariable Long id,
-                                             @RequestParam String title,
-                                             @RequestParam String content,
-                                             @RequestParam Long categoryId) {
+    public ResponseEntity<String> updatePost(@PathVariable Long id, @RequestBody PostDto postDto) {
         try {
-            Post post = postService.updatePost(id, title, content, categoryId);
+            Post post = postService.updatePost(id, postDto.getTitle(), postDto.getContent(), postDto.getCategoryId());
             return ResponseEntity.ok("Post updated with ID: " + post.getId());
         } catch (IllegalStateException e) {
             return ResponseEntity.status(400).body(e.getMessage());

@@ -3,6 +3,7 @@ package project.blogmanagementapp.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import project.blogmanagementapp.dto.CategoryDto;
 import project.blogmanagementapp.entity.Category;
 import project.blogmanagementapp.service.CategoryService;
 
@@ -16,9 +17,9 @@ public class CategoryController {
     private CategoryService categoryService;
 
     @PostMapping
-    public ResponseEntity<String> createCategory(@RequestParam String name) {
+    public ResponseEntity<String> createCategory(@RequestBody CategoryDto categoryDto) {
         try {
-            Category category = categoryService.createCategory(name);
+            Category category = categoryService.createCategory(categoryDto.getName());
             return ResponseEntity.ok("Category created with ID: " + category.getId());
         } catch (IllegalStateException e) {
             return ResponseEntity.status(400).body(e.getMessage());
@@ -39,9 +40,9 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateCategory(@PathVariable Long id, @RequestParam String name) {
+    public ResponseEntity<String> updateCategory(@PathVariable Long id, @RequestBody CategoryDto categoryDto) {
         try {
-            Category category = categoryService.updateCategory(id, name);
+            Category category = categoryService.updateCategory(id, categoryDto.getName());
             return ResponseEntity.ok("Category updated with ID: " + category.getId());
         } catch (IllegalStateException e) {
             return ResponseEntity.status(400).body(e.getMessage());
