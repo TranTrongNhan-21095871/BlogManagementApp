@@ -18,26 +18,26 @@ import java.util.function.Function;
 public class JwtUtil {
 
     private static final String SECRET_KEY = "your-very-secure-secret-key-which-is-very-long"; // ít nhất 32 ký tự
-    private static final long JWT_EXPIRATION_MS = 1000 * 60 * 60 * 24; // 24 hours
+    private static final long JWT_EXPIRATION_MS = 1000 * 60 * 15; // 15 minutes (giảm để kiểm tra nhanh)
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String extractUsername(String token) {
+    public String extractUsername(String token) throws io.jsonwebtoken.ExpiredJwtException {
         return extractClaim(token, Claims::getSubject);
     }
 
-    public Date extractExpiration(String token) {
+    public Date extractExpiration(String token) throws io.jsonwebtoken.ExpiredJwtException {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) throws io.jsonwebtoken.ExpiredJwtException {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    private Claims extractAllClaims(String token) {
+    private Claims extractAllClaims(String token) throws io.jsonwebtoken.ExpiredJwtException {
         return Jwts
                 .parserBuilder()
                 .setSigningKey(getSigningKey())
@@ -47,7 +47,11 @@ public class JwtUtil {
     }
 
     private Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+        try {
+            return extractExpiration(token).before(new Date());
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return true;
+        }
     }
 
     public String generateToken(UserDetails userDetails) {
@@ -67,7 +71,12 @@ public class JwtUtil {
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
+        final String username;
+        try {
+            username = extractUsername(token);
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return false;
+        }
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 }

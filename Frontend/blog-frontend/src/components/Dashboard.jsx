@@ -9,6 +9,9 @@ const Dashboard = ({ token, onLogout }) => {
   const [message, setMessage] = useState('');
   const [editCategory, setEditCategory] = useState(null);
   const [editPost, setEditPost] = useState(null);
+  const [searchTerm, setSearchTerm] = useState(''); // Thêm state cho tìm kiếm
+  const [currentPage, setCurrentPage] = useState(1); // Thêm state cho trang hiện tại
+  const postsPerPage = 5; // Số bài viết trên mỗi trang
 
   useEffect(() => {
     fetchCategories();
@@ -121,6 +124,19 @@ const Dashboard = ({ token, onLogout }) => {
     }
   };
 
+  // Lọc bài viết theo từ khóa tìm kiếm
+  const filteredPosts = posts.filter(post =>
+    post.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Phân trang
+  const indexOfLastPost = currentPage * postsPerPage;
+  const indexOfFirstPost = indexOfLastPost - postsPerPage;
+  const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
+  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   return (
     <div className="p-6 max-w-4xl mx-auto bg-gray-100 min-h-screen">
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h2>
@@ -133,6 +149,20 @@ const Dashboard = ({ token, onLogout }) => {
       >
         Logout
       </button>
+
+      {/* Tìm kiếm */}
+      <div className="mb-6">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // Reset về trang 1 khi tìm kiếm
+          }}
+          className="w-full p-2 border border-gray-300 rounded-md"
+          placeholder="Search posts by title..."
+        />
+      </div>
 
       {/* Create Category Section */}
       <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
@@ -271,19 +301,13 @@ const Dashboard = ({ token, onLogout }) => {
               required
             />
             <select
-              value={editPost.categoryId} // Sử dụng categoryId đã gán
+              value={editPost.categoryId}
               onChange={(e) => setEditPost({ ...editPost, categoryId: Number(e.target.value) })}
               className="w-full p-2 border border-gray-300 rounded-md"
             >
-              {categories.length > 0 ? (
-                categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))
-              ) : (
-                <option value="" disabled>No categories available</option>
-              )}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
             </select>
             <div className="flex space-x-2">
               <button
@@ -308,7 +332,7 @@ const Dashboard = ({ token, onLogout }) => {
       <div className="p-6 bg-white rounded-lg shadow-md">
         <h3 className="text-xl font-semibold mb-4">Posts</h3>
         <ul className="space-y-2">
-          {posts.map((post) => (
+          {currentPosts.map((post) => (
             <li key={post.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-md">
               {post.title} (Category: {post.category.name})
               <div>
@@ -328,6 +352,18 @@ const Dashboard = ({ token, onLogout }) => {
             </li>
           ))}
         </ul>
+        {/* Phân trang */}
+        <div className="mt-4 flex justify-center space-x-2">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+            <button
+              key={number}
+              onClick={() => paginate(number)}
+              className={`px-3 py-1 rounded-md ${currentPage === number ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            >
+              {number}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
