@@ -56,9 +56,9 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public Post updatePost(Long id, String title, String content, Long categoryId) {
+    public Post updatePost(Long id, String title, String content, Long categoryId, Long views) {
         Post post = postRepository.findById(id)
-                .orElseThrow(()->new IllegalStateException("Post not found with id: " + id));
+                .orElseThrow(() -> new IllegalStateException("Post not found with id: " + id));
         Category category = categoryService.getCategoryById(categoryId)
                 .orElseThrow(() -> new IllegalStateException("Category not found with id: " + categoryId));
 
@@ -66,6 +66,7 @@ public class PostServiceImpl implements PostService {
         post.setContent(content);
         post.setUpdatedAt(LocalDateTime.now());
         post.setCategory(category);
+        post.setViews(views != null ? views : post.getViews()); // Cập nhật views nếu có, giữ nguyên nếu null
 
         return postRepository.save(post);
     }

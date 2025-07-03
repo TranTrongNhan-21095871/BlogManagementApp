@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/api';
 
 const Dashboard = ({ token, onLogout }) => {
@@ -9,9 +10,9 @@ const Dashboard = ({ token, onLogout }) => {
   const [message, setMessage] = useState('');
   const [editCategory, setEditCategory] = useState(null);
   const [editPost, setEditPost] = useState(null);
-  const [searchTerm, setSearchTerm] = useState(''); // Thêm state cho tìm kiếm
-  const [currentPage, setCurrentPage] = useState(1); // Thêm state cho trang hiện tại
-  const postsPerPage = 5; // Số bài viết trên mỗi trang
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const postsPerPage = 5;
 
   useEffect(() => {
     fetchCategories();
@@ -21,18 +22,22 @@ const Dashboard = ({ token, onLogout }) => {
   const fetchCategories = async () => {
     try {
       const response = await api.get('/categories');
-      setCategories(response.data);
+      setCategories(response.data || []);
     } catch (error) {
       setMessage('Failed to fetch categories');
+      console.error('Error fetching categories:', error.response?.data || error.message);
+      setCategories([]); // Đặt giá trị mặc định nếu lỗi
     }
   };
 
   const fetchPosts = async () => {
     try {
       const response = await api.get('/posts');
-      setPosts(response.data);
+      setPosts(response.data || []);
     } catch (error) {
       setMessage('Failed to fetch posts');
+      console.error('Error fetching posts:', error.response?.data || error.message);
+      setPosts([]); // Đặt giá trị mặc định nếu lỗi
     }
   };
 
@@ -124,12 +129,26 @@ const Dashboard = ({ token, onLogout }) => {
     }
   };
 
-  // Lọc bài viết theo từ khóa tìm kiếm
+  const handleEditPost = async (post) => {
+    try {
+      const updatedPost = {
+        ...post,
+        views: (post.views || 0) + 1,
+        categoryId: post.category?.id || null // Sử dụng optional chaining
+      };
+      await api.put(`/posts/${post.id}`, updatedPost);
+      setEditPost(updatedPost);
+      fetchPosts();
+    } catch (error) {
+      setMessage('Failed to update views');
+      console.error('Error updating views:', error.response?.data || error.message);
+    }
+  };
+
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Phân trang
   const indexOfLastPost = currentPage * postsPerPage;
   const indexOfFirstPost = indexOfLastPost - postsPerPage;
   const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
@@ -150,21 +169,19 @@ const Dashboard = ({ token, onLogout }) => {
         Logout
       </button>
 
-      {/* Tìm kiếm */}
       <div className="mb-6">
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setCurrentPage(1); // Reset về trang 1 khi tìm kiếm
+            setCurrentPage(1);
           }}
           className="w-full p-2 border border-gray-300 rounded-md"
           placeholder="Search posts by title..."
         />
       </div>
 
-      {/* Create Category Section */}
       <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
         <h3 className="text-xl font-semibold mb-4">Create Category</h3>
         <form onSubmit={handleCreateCategory} className="space-y-4">
@@ -185,7 +202,6 @@ const Dashboard = ({ token, onLogout }) => {
         </form>
       </div>
 
-      {/* Edit Category Section */}
       {editCategory && (
         <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
           <h3 className="text-xl font-semibold mb-4">Edit Category</h3>
@@ -217,7 +233,6 @@ const Dashboard = ({ token, onLogout }) => {
         </div>
       )}
 
-      {/* Category List */}
       <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
         <h3 className="text-xl font-semibold mb-4">Categories</h3>
         <ul className="space-y-2">
@@ -243,7 +258,6 @@ const Dashboard = ({ token, onLogout }) => {
         </ul>
       </div>
 
-      {/* Create Post Section */}
       <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
         <h3 className="text-xl font-semibold mb-4">Create Post</h3>
         <form onSubmit={handleCreatePost} className="space-y-4">
@@ -280,7 +294,6 @@ const Dashboard = ({ token, onLogout }) => {
         </form>
       </div>
 
-      {/* Edit Post Section */}
       {editPost && (
         <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
           <h3 className="text-xl font-semibold mb-4">Edit Post</h3>
@@ -328,16 +341,17 @@ const Dashboard = ({ token, onLogout }) => {
         </div>
       )}
 
-      {/* Post List */}
       <div className="p-6 bg-white rounded-lg shadow-md">
         <h3 className="text-xl font-semibold mb-4">Posts</h3>
         <ul className="space-y-2">
           {currentPosts.map((post) => (
             <li key={post.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-md">
-              {post.title} (Category: {post.category.name})
+              <Link to={`/post/${post.id}`} className="text-blue-500 hover:underline">
+                {post.title} (Category: {post.category?.name || 'N/A'}, Views: {post.views || 0})
+              </Link>
               <div>
                 <button
-                  onClick={() => setEditPost({ ...post, categoryId: post.category.id })}
+                  onClick={() => handleEditPost(post)}
                   className="mr-2 bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600"
                 >
                   Edit
@@ -352,7 +366,6 @@ const Dashboard = ({ token, onLogout }) => {
             </li>
           ))}
         </ul>
-        {/* Phân trang */}
         <div className="mt-4 flex justify-center space-x-2">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
             <button

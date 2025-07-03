@@ -7,10 +7,11 @@ const api = axios.create({
   },
 });
 
-// Thêm token vào header nếu có
+let token = null; // Biến lưu token
+
+// Interceptor để thêm token vào header
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -19,8 +20,20 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-export const setAuthToken = (token) => {
-  localStorage.setItem('token', token);
+// Hàm để đặt token
+export const setAuthToken = (newToken) => {
+  token = newToken;
+  if (newToken) {
+    localStorage.setItem('token', newToken); // Lưu token vào localStorage
+  } else {
+    localStorage.removeItem('token'); // Xóa token nếu null
+  }
 };
+
+// Khởi tạo token từ localStorage khi load
+const storedToken = localStorage.getItem('token');
+if (storedToken) {
+  setAuthToken(storedToken);
+}
 
 export default api;

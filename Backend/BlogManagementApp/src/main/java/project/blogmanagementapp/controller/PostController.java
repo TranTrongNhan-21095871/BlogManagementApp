@@ -42,7 +42,7 @@ public class PostController {
     @PutMapping("/{id}")
     public ResponseEntity<String> updatePost(@PathVariable Long id, @RequestBody PostDto postDto) {
         try {
-            Post post = postService.updatePost(id, postDto.getTitle(), postDto.getContent(), postDto.getCategoryId());
+            Post post = postService.updatePost(id, postDto.getTitle(), postDto.getContent(), postDto.getCategoryId(), postDto.getViews());
             return ResponseEntity.ok("Post updated with ID: " + post.getId());
         } catch (IllegalStateException e) {
             return ResponseEntity.status(400).body(e.getMessage());
