@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/api';
 
-const Dashboard = ({ token, onLogout }) => {
+const Dashboard = ({ token, user, onLogout }) => {
   const [categories, setCategories] = useState([]);
   const [posts, setPosts] = useState([]);
   const [newCategory, setNewCategory] = useState('');
-  const [newPost, setNewPost] = useState({ title: '', content: '', userId: 1, categoryId: 1 });
+  const [newPost, setNewPost] = useState({ 
+    title: '', 
+    content: '', 
+    userId: user?.id || null, 
+    categoryId: '' 
+  });
   const [message, setMessage] = useState('');
   const [editCategory, setEditCategory] = useState(null);
   const [editPost, setEditPost] = useState(null);
@@ -19,25 +24,33 @@ const Dashboard = ({ token, onLogout }) => {
     fetchPosts();
   }, []);
 
+  useEffect(() => {
+    if (categories.length > 0 && !newPost.categoryId) {
+      setNewPost(prev => ({ ...prev, categoryId: categories[0].id }));
+    }
+  }, [categories]);
+
   const fetchCategories = async () => {
     try {
       const response = await api.get('/categories');
+      console.log('Fetched categories:', response.data); // Debug
       setCategories(response.data || []);
     } catch (error) {
       setMessage('Failed to fetch categories');
       console.error('Error fetching categories:', error.response?.data || error.message);
-      setCategories([]); // Đặt giá trị mặc định nếu lỗi
+      setCategories([]);
     }
   };
 
   const fetchPosts = async () => {
     try {
       const response = await api.get('/posts');
+      console.log('Fetched posts:', response.data); // Debug
       setPosts(response.data || []);
     } catch (error) {
       setMessage('Failed to fetch posts');
       console.error('Error fetching posts:', error.response?.data || error.message);
-      setPosts([]); // Đặt giá trị mặc định nếu lỗi
+      setPosts([]);
     }
   };
 
@@ -93,7 +106,7 @@ const Dashboard = ({ token, onLogout }) => {
     }
     try {
       const response = await api.post('/posts', newPost);
-      setNewPost({ title: '', content: '', userId: 1, categoryId: 1 });
+      setNewPost({ title: '', content: '', userId: user?.id || null, categoryId: '' });
       fetchPosts();
       setMessage('Post created successfully');
     } catch (error) {
@@ -134,7 +147,7 @@ const Dashboard = ({ token, onLogout }) => {
       const updatedPost = {
         ...post,
         views: (post.views || 0) + 1,
-        categoryId: post.category?.id || null // Sử dụng optional chaining
+        categoryId: post.category?.id || null
       };
       await api.put(`/posts/${post.id}`, updatedPost);
       setEditPost(updatedPost);
@@ -277,7 +290,7 @@ const Dashboard = ({ token, onLogout }) => {
             required
           />
           <select
-            value={newPost.categoryId}
+            value={newPost.categoryId || ''}
             onChange={(e) => setNewPost({ ...newPost, categoryId: Number(e.target.value) })}
             className="w-full p-2 border border-gray-300 rounded-md"
           >
@@ -314,7 +327,7 @@ const Dashboard = ({ token, onLogout }) => {
               required
             />
             <select
-              value={editPost.categoryId}
+              value={editPost.categoryId || ''}
               onChange={(e) => setEditPost({ ...editPost, categoryId: Number(e.target.value) })}
               className="w-full p-2 border border-gray-300 rounded-md"
             >
@@ -346,7 +359,11 @@ const Dashboard = ({ token, onLogout }) => {
         <ul className="space-y-2">
           {currentPosts.map((post) => (
             <li key={post.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-md">
-              <Link to={`/post/${post.id}`} className="text-blue-500 hover:underline">
+              <Link 
+                to={`/post/${post.id}`} 
+                className="text-blue-500 hover:underline"
+                onClick={(e) => console.log('Link clicked, post.id:', post.id)} // Debug
+              >
                 {post.title} (Category: {post.category?.name || 'N/A'}, Views: {post.views || 0})
               </Link>
               <div>

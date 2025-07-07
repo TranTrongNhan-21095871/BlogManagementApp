@@ -8,10 +8,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 import project.blogmanagementapp.dto.AuthDto;
+import project.blogmanagementapp.entity.Role;
 import project.blogmanagementapp.entity.User;
 import project.blogmanagementapp.security.JwtUtil;
 import project.blogmanagementapp.service.UserService;
 
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,8 +35,18 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody AuthDto.RegistrationRequest request) {
-        User user = userService.registerUser(request.getUsername(), request.getPassword(), request.getEmail());
-        return ResponseEntity.ok("User registered with ID: " + user.getId());
+        try {
+            // Thêm role từ request, mặc định là "USER" nếu không có
+            User user = userService.registerUser(
+                    request.getUsername(),
+                    request.getPassword(),
+                    request.getEmail(),
+                    Role.USER.name()// Lấy role từ DTO
+            );
+            return ResponseEntity.ok("User registered with ID: " + user.getId());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid role: " + request.getRole());
+        }
     }
 
     @PostMapping("/login")
@@ -59,5 +71,12 @@ public class AuthController {
     @GetMapping("/test")
     public ResponseEntity<String> test() {
         return ResponseEntity.ok("Protected endpoint");
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<User> getCurrentUser(Principal principal) {
+        String username = principal.getName();
+        User user = userService.findByUsername(username);
+        return ResponseEntity.ok(user);
     }
 }

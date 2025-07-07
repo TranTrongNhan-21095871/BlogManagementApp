@@ -1,51 +1,142 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import './index.css';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import PostDetail from './components/PostDetail';
+import api, { setAuthToken } from './api/api';
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [authData, setAuthData] = useState({
+    token: localStorage.getItem('token') || null,
+    user: JSON.parse(localStorage.getItem('user') || null),
+    isAuthenticated: false
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      fetch('http://localhost:8080/api/validate-token', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${storedToken}`,
-        },
-      })
-        .then(response => {
-          if (!response.ok) throw new Error('Token invalid');
-          return response.json();
-        })
-        .then(() => setToken(storedToken))
-        .catch(() => {
-          localStorage.removeItem('token');
-          setToken(null); // Xóa token nếu không hợp lệ
-          console.error('Token validation failed, redirecting to login');
+    const validateToken = async () => {
+      const token = localStorage.getItem('token');
+      console.log('Validating token:', token); // Debug
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setAuthToken(token);
+        const response = await api.get('/auth/validate-token');
+        console.log('Validate response:', response.data);
+        const userResponse = await api.get('/auth/me');
+        setAuthData({
+          token,
+          user: userResponse.data,
+          isAuthenticated: true
         });
-    }
+      } catch (error) {
+        console.error('Token validation error:', error.response?.data || error.message, error.response?.status);
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setAuthData({
+            token: null,
+            user: null,
+            isAuthenticated: false
+          });
+          window.location.href = '/login';
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setAuthData({
+            token: null,
+            user: null,
+            isAuthenticated: false
+          });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    validateToken();
   }, []);
+
+  const handleLogin = async (token) => {
+    setAuthToken(token);
+    try {
+      console.log('Login successful, token:', token); // Debug
+      const userResponse = await api.get('/auth/me');
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userResponse.data));
+      setAuthData({
+        token,
+        user: userResponse.data,
+        isAuthenticated: true
+      });
+    } catch (error) {
+      console.error('Failed to fetch user info:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setAuthData({
+        token: null,
+        user: null,
+        isAuthenticated: false
+      });
+    }
+  };
+
+  const handleLogout = () => {
+    setAuthToken(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setAuthData({
+      token: null,
+      user: null,
+      isAuthenticated: false
+    });
+  };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-100">
-        <Routes>
-          {!token ? (
-            <Route path="/login" element={<Auth onLogin={(token) => { localStorage.setItem('token', token); setToken(token); }} />} />
-          ) : (
-            <>
-              <Route path="/dashboard" element={<Dashboard token={token} onLogout={() => { localStorage.removeItem('token'); setToken(null); }} />} />
-              <Route path="/post/:id" element={<PostDetail token={token} />} />
-              <Route path="/" element={<Navigate to="/dashboard" />} />
-            </>
-          )}
-          <Route path="*" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route 
+          path="/login" 
+          element={
+            !authData.isAuthenticated ? 
+              <Auth onLogin={handleLogin} /> : 
+              <Navigate to="/dashboard" replace />
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            authData.isAuthenticated ? 
+              <Dashboard 
+                token={authData.token} 
+                user={authData.user} 
+                onLogout={handleLogout} 
+              /> : 
+              <Navigate to="/login" replace />
+          } 
+        />
+        <Route 
+          path="/post/:id" 
+          element={
+            authData.isAuthenticated ? 
+              <PostDetail token={authData.token} /> : 
+              <Navigate to="/login" replace />
+          } 
+        />
+        <Route 
+          path="/" 
+          element={
+            <Navigate to={authData.isAuthenticated ? "/dashboard" : "/login"} replace />
+          } 
+        />
+      </Routes>
     </Router>
   );
 }
